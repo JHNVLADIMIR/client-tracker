@@ -1,0 +1,16 @@
+<?php
+require_once __DIR__ . '/core/auth.php'; requireLogin();
+require_once __DIR__ . '/core/dbConfig.php'; require_once __DIR__ . '/core/models.php';
+$clients = deletedClients($pdo); $automations = deletedAutomations($pdo);
+function auditDate(?string $value): string { return $value ? date('M j, Y g:i A', strtotime($value)) : 'Unknown'; }
+$messages = ['automation_restored' => 'Automation restored. It is active again.', 'error_restore' => 'Could not restore. Its client may still be deleted.'];
+$notice = $messages[requestCode(array_keys($messages))] ?? '';
+?>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Recycle Bin | Client Tracker</title><link rel="stylesheet" href="styles.css"></head><body>
+<?php require __DIR__ . '/navbar.php'; ?><main class="container"><section class="page-heading"><p class="eyebrow">RECORD HISTORY</p><h1>Recycle Bin</h1><p class="subtitle">Users can see who deleted a record and when, and restore deleted automations.</p></section>
+<?php if ($notice !== ''): ?><div class="notice"><?= e($notice) ?></div><?php endif; ?>
+<section class="card"><div class="section-heading"><h2>Deleted Clients <span class="count-pill"><?= count($clients) ?></span></h2></div>
+<?php if (!$clients): ?><p class="empty-state">No deleted clients.</p><?php else: ?><div class="table-wrap"><table><thead><tr><th>Business</th><th>Email</th><th>Originally Added By</th><th>Deleted By</th><th>Deleted At</th></tr></thead><tbody><?php foreach ($clients as $row): ?><tr><td><?= e($row['business_name']) ?></td><td><?= e($row['email']) ?></td><td><?= e($row['added_by_name']) ?></td><td><?= e($row['deleted_by_name']) ?></td><td><?= e(auditDate($row['deleted_at'])) ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?></section>
+<section class="card"><div class="section-heading"><h2>Deleted Automations <span class="count-pill"><?= count($automations) ?></span></h2></div>
+<?php if (!$automations): ?><p class="empty-state">No deleted automations.</p><?php else: ?><div class="table-wrap"><table><thead><tr><th>Image</th><th>Automation</th><th>Client</th><th>Originally Added By</th><th>Deleted By</th><th>Deleted At</th><th>Action</th></tr></thead><tbody><?php foreach ($automations as $row): ?><tr><td><?php if (!empty($row['image_path'])): ?><a href="<?= e($row['image_path']) ?>" target="_blank"><img class="thumb" src="<?= e($row['image_path']) ?>" alt="Automation image"></a><?php else: ?>—<?php endif; ?></td><td><?= e($row['automation_name']) ?></td><td><?= e($row['business_name'] ?? 'Unknown') ?></td><td><?= e($row['added_by_name']) ?></td><td><?= e($row['deleted_by_name']) ?></td><td><?= e(auditDate($row['deleted_at'])) ?></td><td><form action="core/handleForms.php" method="post" class="inline-form"><input type="hidden" name="csrf_token" value="<?= e(csrfToken()) ?>"><input type="hidden" name="action" value="automation_restore"><input type="hidden" name="automation_id" value="<?= (int) $row['id'] ?>"><button class="button button-small" type="submit">Restore</button></form></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?></section>
+</main></body></html>
